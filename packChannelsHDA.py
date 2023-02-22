@@ -95,16 +95,21 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 
 	return (
 		hou.MenuParmTemplate(
-		'channels',
-		'Channels',
-		[],
-		is_button_strip= True,
-		menu_type=hou.menuType.StringToggle,
-		item_generator_script= str(sum(zip(button_labels, button_labels), ())),
-		item_generator_script_language=hou.scriptLanguage.Python,
-		default_value= int('0110111'[::-1], 2),
-		script_callback= 'hou.pwd().hm().toggleAttributes(kwargs)',
-		script_callback_language= hou.scriptLanguage.Python,
+			'mode',
+			'Mode',
+			['points', 'vertices', 'texture']
+		),
+		hou.MenuParmTemplate(
+			'channels',
+			'Channels',
+			[],
+			is_button_strip= True,
+			menu_type=hou.menuType.StringToggle,
+			item_generator_script= str(sum(zip(button_labels, button_labels), ())),
+			item_generator_script_language=hou.scriptLanguage.Python,
+			default_value= int('0110111'[::-1], 2),
+			script_callback= 'hou.pwd().hm().toggleAttributes(kwargs)',
+			script_callback_language= hou.scriptLanguage.Python,
 		),
 		*(_attrParmTemplate(x[0], x[1]) for x in buttons)
 	)
