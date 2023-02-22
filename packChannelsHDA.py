@@ -54,13 +54,44 @@ def _create_hda(parent: hou.Node) -> hou.Node:
 		create_backup= False,
 	)
 
+def _attrParmTemplate(name: str, size: int) -> hou.FolderParmTemplate:
+	return hou.FolderParmTemplate(
+		name,
+		name,
+		folder_type= hou.folderType.Simple,
+		tags= {"group_type": "simple", "sidefx::look": "blank"},
+		parm_templates= [
+			hou.MenuParmTemplate(
+				f'{name}_{x}',
+				name,
+				[],
+				is_label_hidden= x > 0,
+				join_with_next= True,
+				item_generator_script= 'hou.pwd().hm().component_menu_list(kwargs)',
+				item_generator_script_language=hou.scriptLanguage.Python,
+			) for x in range(size)
+		]
+	)
+
 
 def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 	'''Returns list of parameters for hda UI.'''
 
-	button_labels = ['P', 'N', 'Cd']
-	button_labels.extend([f'uv{x if x > 1 else ""}' for x in range(1, 9)])
-	button_items = [str(x) for x in range(len(button_labels))]
+	buttons = (
+		('P', 3),
+		('N', 3),
+		('Cd', 4),
+		('uv', 2),
+		('uv1', 2),
+		('uv2', 2),
+		('uv3', 2),
+		('uv4', 2),
+		('uv5', 2),
+		('uv6', 2),
+		('uv7', 2),
+	)
+
+	button_labels = [x[0] for x in buttons]
 
 	return (
 		hou.MenuParmTemplate(
@@ -69,11 +100,15 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 		[],
 		is_button_strip= True,
 		menu_type=hou.menuType.StringToggle,
-		item_generator_script= str(sum(zip(button_items, button_labels), ())),
+		item_generator_script= str(sum(zip(button_labels, button_labels), ())),
 		item_generator_script_language=hou.scriptLanguage.Python,
 		default_value= int('0110111'[::-1], 2),
+		script_callback= 'hou.pwd().hm().toggleAttributes(kwargs)',
+		script_callback_language= hou.scriptLanguage.Python,
 		),
+		*(_attrParmTemplate(x[0], x[1]) for x in buttons)
 	)
+
 
 def _build_hda_network(parent: hou.Node) -> None:
 	tmp_node = parent.createNode('null')
@@ -99,6 +134,12 @@ def build() -> hou.Node:
 		_read_file('PythonModule.py')
 		)
 	definition.setExtraFileOption('PythonModule/IsPython', True)
+	
+	definition.addSection(
+		'OnCreated',
+		'hou.pwd().hm().toggleAttributes(kwargs)'
+		)
+	definition.setExtraFileOption('OnCreated/IsPython', True)
 
 	parms = _build_parms()
 	parm_template_group = hou.ParmTemplateGroup(parms)
