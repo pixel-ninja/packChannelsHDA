@@ -1,0 +1,43 @@
+string buttons[] = {'P', 'N', 'Cd', 'uv', 'uv1', 'uv2', 'uv3', 'uv4', 'uv5', 'uv6', 'uv7'};
+int sizes[] = {3, 3, 4, 2, 2, 2, 2, 2, 2, 2, 2};
+string components = 'xyzw';
+
+int channels = chi('../channels');
+// string bits = '';
+
+string attribPath = '../%s_%i';
+string attribName, componentName;
+string componentSplit[];
+int attribSize;
+float componentValue[];
+
+for(int i=0; i<11; i++){
+    // bits += sprintf('%d', shr(channels, i) % 2);
+    if (shr(channels, i) % 2 == 0 )
+        continue;
+        
+    attribName = buttons[i];
+    attribSize = sizes[i];
+    
+    if(!hasattrib(0, 'point', attribName)){
+        //TODO: Set correct attrib type and size
+        addattrib(0, 'point', attribName, {0,0,0});
+    }
+    
+    for(int j=0; j<attribSize; j++){
+        componentName = chs(sprintf(attribPath, attribName, j));
+        componentSplit = split(componentName, '.');
+        
+        // Handle single floats
+        if (componentSplit[1] == '')
+            componentSplit[1] = 'x';
+        
+        float value[] = attrib(0, 'point', componentSplit[0], @elemnum);
+        append(componentValue, value[find(components, componentSplit[1])]);
+    }
+    
+    setattrib(0, 'point', attribName, @elemnum, 1, componentValue);
+}
+
+
+// printf('%d\n', bits);

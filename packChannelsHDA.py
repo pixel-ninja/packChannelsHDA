@@ -94,33 +94,58 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 	button_labels = [x[0] for x in buttons]
 
 	return (
-		hou.MenuParmTemplate(
-			'mode',
-			'Mode',
-			['points', 'vertices', 'texture']
+		hou.FolderParmTemplate(
+			'options',
+			'Attributes',
+			folder_type= hou.folderType.Simple,
+			parm_templates= (
+				hou.MenuParmTemplate(
+					'mode',
+					'Mode',
+					['points', 'vertices', 'texture']
+				),
+				hou.MenuParmTemplate(
+					'channels',
+					'Channels',
+					[],
+					is_button_strip= True,
+					menu_type=hou.menuType.StringToggle,
+					item_generator_script= str(sum(zip(button_labels, button_labels), ())),
+					item_generator_script_language=hou.scriptLanguage.Python,
+					default_value= int('0110111'[::-1], 2),
+					script_callback= 'hou.pwd().hm().toggle_attributes(kwargs)',
+					script_callback_language= hou.scriptLanguage.Python,
+				),
+				hou.StringParmTemplate(
+					'attributes',
+					'Attributes',
+					1,
+					menu_type= hou.menuType.StringToggle,
+					item_generator_script= 'hou.pwd().hm().attribute_menu_list(kwargs)',
+					item_generator_script_language= hou.scriptLanguage.Python,
+				),
+			),
 		),
-		hou.MenuParmTemplate(
-			'channels',
-			'Channels',
-			[],
-			is_button_strip= True,
-			menu_type=hou.menuType.StringToggle,
-			item_generator_script= str(sum(zip(button_labels, button_labels), ())),
-			item_generator_script_language=hou.scriptLanguage.Python,
-			default_value= int('0110111'[::-1], 2),
-			script_callback= 'hou.pwd().hm().toggleAttributes(kwargs)',
-			script_callback_language= hou.scriptLanguage.Python,
+		hou.FolderParmTemplate(
+			'packing',
+			'Packing',
+			folder_type= hou.folderType.Simple,
+			parm_templates= [_attrParmTemplate(x[0], x[1]) for x in buttons],
 		),
-		*(_attrParmTemplate(x[0], x[1]) for x in buttons)
 	)
 
 
 def _build_hda_network(parent: hou.Node) -> None:
-	tmp_node = parent.createNode('null')
-	tmp_node.setInput(0, parent.indirectInputs()[0])
+	# tmp_node = parent.createNode('null')
+	# print(tmp_node.name())
+	# tmp_node.setInput(0, parent.indirectInputs()[0])
+
+	wrangle_node = parent.createNode("attribwrangle", "assign_components")
+	wrangle_node.parm('snippet').set(_read_file('assignComponents.vfl'))
+	wrangle_node.setInput(0, parent.indirectInputs()[0])
 	
 	output_node = parent.createNode('output')
-	output_node.setInput(0, tmp_node)
+	output_node.setInput(0, wrangle_node)
 	
 	parent.layoutChildren()
 
@@ -142,7 +167,7 @@ def build() -> hou.Node:
 	
 	definition.addSection(
 		'OnCreated',
-		'hou.pwd().hm().toggleAttributes(kwargs)'
+		'kwargs["node"].hm().toggle_attributes(kwargs)'
 		)
 	definition.setExtraFileOption('OnCreated/IsPython', True)
 
