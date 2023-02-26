@@ -1,43 +1,73 @@
 string buttons[] = {'P', 'N', 'Cd', 'uv', 'uv1', 'uv2', 'uv3', 'uv4', 'uv5', 'uv6', 'uv7'};
-int sizes[] = {3, 3, 4, 2, 2, 2, 2, 2, 2, 2, 2};
-string components = 'xyzw';
 
 int channels = chi('../channels');
-// string bits = '';
+string mode = {'point', 'vertex', 'texture'}[chi('../mode')];
 
-string attribPath = '../%s_%i';
-string attribName, componentName;
-string componentSplit[];
-int attribSize;
-float componentValue[];
 
-for(int i=0; i<11; i++){
-    // bits += sprintf('%d', shr(channels, i) % 2);
-    if (shr(channels, i) % 2 == 0 )
-        continue;
+void initialiseAttribute(string name; string mode){
+    // Create missing attribute and set correct type
+    if(hasattrib(0, mode, name))
+        return;
         
-    attribName = buttons[i];
-    attribSize = sizes[i];
-    
-    if(!hasattrib(0, 'point', attribName)){
-        //TODO: Set correct attrib type and size
-        addattrib(0, 'point', attribName, {0,0,0});
+    if (name[:-1] == 'uv'){
+        addattrib(0, mode, name, {0,0});
+        setattribtypeinfo(0, mode, name, 'texturecoord');
+    }else if(name == 'Alpha'){
+        addattrib(0, mode, name, 0);
+    }else{
+        addattrib(0, mode, name, {0,0,0});
+        if (name == 'N')
+            setattribtypeinfo(0, mode, name, 'normal');
+    }   
+}
+
+void setAttribComponents(string name; string mode; int elemnum){
+    // Set components of attribute from menus
+    int size = 3;
+    if (name[:-1] == 'uv'){
+        size = 2;
+    }else if ( name == 'Alpha'){
+        size = 1;
     }
     
-    for(int j=0; j<attribSize; j++){
-        componentName = chs(sprintf(attribPath, attribName, j));
-        componentSplit = split(componentName, '.');
-        
+    string pathPattern = '../%s_%i';
+    float componentValues[];
+    
+    printf('size: %d\n', size);
+    
+    // Loop through component parameters
+    for(int i=0; i<size; i++){
+        string componentName = chs(sprintf(pathPattern, name, i));
+        string componentSplit[] = split(componentName, '.');
+        printf('%s\n', componentName);
         // Handle single floats
         if (componentSplit[1] == '')
             componentSplit[1] = 'x';
-        
-        float value[] = attrib(0, 'point', componentSplit[0], @elemnum);
-        append(componentValue, value[find(components, componentSplit[1])]);
+
+        float value[] = attrib(0, mode, componentSplit[0], elemnum);
+        append(componentValues, value[find('xyzw', componentSplit[1])]);
     }
     
-    setattrib(0, 'point', attribName, @elemnum, 1, componentValue);
+    //Set Value
+    if(name == 'Alpha'){
+        setattrib(0, mode, name, elemnum, 1, float(componentValues));   
+    }else{
+        setattrib(0, mode, name, elemnum, 1, vector(componentValues));
+        
+        if(name == 'N')
+            setattribtypeinfo(0, mode, name, 'normal');
+       
+        if (name[:-1] == 'uv')
+            setattribtypeinfo(0, mode, name, 'texturecoord');
+    }
 }
 
-
-// printf('%d\n', bits);
+for(int i=0; i<11; i++){
+    // Skip unset buttons
+    if (shr(channels, i) % 2 == 0 )
+        continue;
+        
+    string name = buttons[i];
+    initialiseAttribute(name, mode);
+    setAttribComponents(name, mode, @elemnum);
+}
