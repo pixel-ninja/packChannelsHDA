@@ -8,8 +8,8 @@ void setAttribComponents(string name; string mode; int elemnum){
     int size = 3;
     if (name[:-1] == 'uv'){
         size = 2;
-    }else if ( name == 'Alpha'){
-        size = 1;
+    }else if ( name == 'Cd'){
+        size = 4;
     }
     
     string pathPattern = '../%s_%i';
@@ -24,13 +24,22 @@ void setAttribComponents(string name; string mode; int elemnum){
         if (componentSplit[1] == '')
             componentSplit[1] = 'x';
 
-        float value[] = attrib(0, mode, componentSplit[0], elemnum);
-        append(componentValues, value[find('xyzw', componentSplit[1])]);
+        float value = 0;
+
+        // Set default to 1 for Alpha
+        if (name == 'Cd' && i == 3 && componentName == ' '){
+            value = 1;
+        }else{
+            float attribValue[] = attrib(0, mode, componentSplit[0], elemnum);
+            value = attribValue[find('xyzw', componentSplit[1])];
+        }
+        append(componentValues, value);
     }
     
     //Set Value
-    if(name == 'Alpha'){
-        setattrib(0, mode, name, elemnum, 1, float(componentValues));   
+    if(name == 'Cd'){
+        setattrib(0, mode, name, elemnum, 1, vector(componentValues));
+        setattrib(0, mode, 'Alpha', elemnum, 1, componentValues[-1]);  
     }else{
         setattrib(0, mode, name, elemnum, 1, vector(componentValues));
         
