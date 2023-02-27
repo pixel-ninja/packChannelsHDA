@@ -1,25 +1,7 @@
 string buttons[] = {'P', 'N', 'Cd', 'uv', 'uv1', 'uv2', 'uv3', 'uv4', 'uv5', 'uv6', 'uv7'};
-
 int channels = chi('../channels');
 string mode = {'point', 'vertex', 'texture'}[chi('../mode')];
 
-
-void initialiseAttribute(string name; string mode){
-    // Create missing attribute and set correct type
-    if(hasattrib(0, mode, name))
-        return;
-        
-    if (name[:-1] == 'uv'){
-        addattrib(0, mode, name, {0,0});
-        setattribtypeinfo(0, mode, name, 'texturecoord');
-    }else if(name == 'Alpha'){
-        addattrib(0, mode, name, 0);
-    }else{
-        addattrib(0, mode, name, {0,0,0});
-        if (name == 'N')
-            setattribtypeinfo(0, mode, name, 'normal');
-    }   
-}
 
 void setAttribComponents(string name; string mode; int elemnum){
     // Set components of attribute from menus
@@ -33,13 +15,11 @@ void setAttribComponents(string name; string mode; int elemnum){
     string pathPattern = '../%s_%i';
     float componentValues[];
     
-    printf('size: %d\n', size);
-    
     // Loop through component parameters
     for(int i=0; i<size; i++){
         string componentName = chs(sprintf(pathPattern, name, i));
         string componentSplit[] = split(componentName, '.');
-        printf('%s\n', componentName);
+
         // Handle single floats
         if (componentSplit[1] == '')
             componentSplit[1] = 'x';
@@ -62,12 +42,12 @@ void setAttribComponents(string name; string mode; int elemnum){
     }
 }
 
+// Run through attribute buttons
 for(int i=0; i<11; i++){
     // Skip unset buttons
     if (shr(channels, i) % 2 == 0 )
         continue;
         
     string name = buttons[i];
-    initialiseAttribute(name, mode);
     setAttribComponents(name, mode, @elemnum);
 }
