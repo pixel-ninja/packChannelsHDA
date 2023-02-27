@@ -4,6 +4,14 @@ string mode = {'point', 'vertex', 'texture'}[chi('../mode')];
 
 
 void setAttribComponents(string name; string mode; int elemnum){
+    int elem_num = elemnum;
+    int vertex_num = 0;
+    
+    if (mode == 'vertex'){
+        elem_num = -1;
+        vertex_num = elemnum;
+    }
+
     // Set components of attribute from menus
     int size = 3;
     if (name[:-1] == 'uv'){
@@ -25,8 +33,7 @@ void setAttribComponents(string name; string mode; int elemnum){
             componentSplit[1] = 'x';
 
         float value = 0;
-
-        // Set default to 1 for Alpha
+  
         if (name == 'Cd' && i == 3 && componentName == ' '){
             value = 1;
         }else{
@@ -38,10 +45,10 @@ void setAttribComponents(string name; string mode; int elemnum){
     
     //Set Value
     if(name == 'Cd'){
-        setattrib(0, mode, name, elemnum, 1, vector(componentValues));
-        setattrib(0, mode, 'Alpha', elemnum, 1, componentValues[-1]);  
+        setattrib(0, mode, name, elem_num, vertex_num, vector(componentValues));
+        setattrib(0, mode, 'Alpha', elem_num, vertex_num, componentValues[-1]);  
     }else{
-        setattrib(0, mode, name, elemnum, 1, vector(componentValues));
+        setattrib(0, mode, name, elem_num, vertex_num, vector(componentValues));
         
         if(name == 'N')
             setattribtypeinfo(0, mode, name, 'normal');
