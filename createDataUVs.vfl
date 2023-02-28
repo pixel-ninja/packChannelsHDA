@@ -1,0 +1,4 @@
+string class = {'point', 'vertex'}[chi('../class')];
+string uv_name = '__data_uv';
+addattrib(0, class, uv_name, {0, 0, 0});
+setattribtypeinfo(0, class, uv_name, 'texturecoord');

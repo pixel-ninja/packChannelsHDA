@@ -1,13 +1,13 @@
 string buttons[] = {'P', 'N', 'Cd', 'uv', 'uv1', 'uv2', 'uv3', 'uv4', 'uv5', 'uv6', 'uv7'};
 int channels = chi('../channels');
-string mode = {'point', 'vertex', 'texture'}[chi('../mode')];
+string class = {'point', 'vertex', 'texture'}[chi('../class')];
 
 
-void setAttribComponents(string name; string mode; int elemnum){
+void setAttribComponents(string name; string class; int elemnum){
     int elem_num = elemnum;
     int vertex_num = 0;
     
-    if (mode == 'vertex'){
+    if (class == 'vertex'){
         elem_num = -1;
         vertex_num = elemnum;
     }
@@ -37,7 +37,7 @@ void setAttribComponents(string name; string mode; int elemnum){
         if (name == 'Cd' && i == 3 && componentName == ' '){
             value = 1;
         }else{
-            float attribValue[] = attrib(0, mode, componentSplit[0], elemnum);
+            float attribValue[] = attrib(0, class, componentSplit[0], elemnum);
             value = attribValue[find('xyzw', componentSplit[1])];
         }
         append(componentValues, value);
@@ -45,16 +45,16 @@ void setAttribComponents(string name; string mode; int elemnum){
     
     //Set Value
     if(name == 'Cd'){
-        setattrib(0, mode, name, elem_num, vertex_num, vector(componentValues));
-        setattrib(0, mode, 'Alpha', elem_num, vertex_num, componentValues[-1]);  
+        setattrib(0, class, name, elem_num, vertex_num, vector(componentValues));
+        setattrib(0, class, 'Alpha', elem_num, vertex_num, componentValues[-1]);  
     }else{
-        setattrib(0, mode, name, elem_num, vertex_num, vector(componentValues));
+        setattrib(0, class, name, elem_num, vertex_num, vector(componentValues));
         
         if(name == 'N')
-            setattribtypeinfo(0, mode, name, 'normal');
+            setattribtypeinfo(0, class, name, 'normal');
        
         if (name[:-1] == 'uv')
-            setattribtypeinfo(0, mode, name, 'texturecoord');
+            setattribtypeinfo(0, class, name, 'texturecoord');
     }
 }
 
@@ -65,5 +65,5 @@ for(int i=0; i<11; i++){
         continue;
         
     string name = buttons[i];
-    setAttribComponents(name, mode, @elemnum);
+    setAttribComponents(name, class, @elemnum);
 }

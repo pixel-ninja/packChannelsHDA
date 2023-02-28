@@ -102,7 +102,14 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 				hou.MenuParmTemplate(
 					'mode',
 					'Mode',
-					['points', 'vertices', 'texture']
+					['geometry', 'texture'],
+					join_with_next= True,
+				),
+				hou.MenuParmTemplate(
+					'class',
+					'Class',
+					['points', 'vertices'],
+					is_label_hidden= True,
 				),
 				hou.StringParmTemplate(
 					'attributes',
@@ -112,6 +119,14 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					item_generator_script= 'hou.pwd().hm().attribute_menu_list(kwargs)',
 					item_generator_script_language= hou.scriptLanguage.Python,
 				),
+			),
+		),
+		hou.FolderParmTemplate(
+			'packing_attributes',
+			'Packing',
+			folder_type= hou.folderType.Simple,
+			conditionals= { hou.parmCondType.HideWhen: '{ mode == texture }' },
+			parm_templates= (
 				hou.MenuParmTemplate(
 					'channels',
 					'Channels',
@@ -124,29 +139,43 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					script_callback= 'hou.pwd().hm().toggle_attributes(kwargs)',
 					script_callback_language= hou.scriptLanguage.Python,
 				),
+				hou.SeparatorParmTemplate('channel_separator'),
+				*(_attrParmTemplate(x[0], x[1]) for x in buttons),
 			),
-		),
-		hou.FolderParmTemplate(
-			'packing',
-			'Packing',
-			folder_type= hou.folderType.Simple,
-			parm_templates= [_attrParmTemplate(x[0], x[1]) for x in buttons],
 		),
 	)
 
 
 def _build_hda_network(parent: hou.Node) -> None:
-	# tmp_node = parent.createNode('null')
-	# print(tmp_node.name())
-	# tmp_node.setInput(0, parent.indirectInputs()[0])
+	'''Builds network inside of hda for assigning attribute values.'''
 
+	# GEO BRANCH
+	# Wrangle for assigning components to point/vector attributes
 	wrangle_node = parent.createNode("attribwrangle", "assign_components")
 	wrangle_node.parm('snippet').set(_read_file('assignComponents.vfl'))
-	wrangle_node.parm('class').setExpression('ch("../mode")+2')
+	wrangle_node.parm('class').setExpression('ch("../class")+2')
 	wrangle_node.setInput(0, parent.indirectInputs()[0])
+
+	# TEXTURE BRANCH
+	# Wrangle for creating data uvs
+	wrangle_uv_attr_node = parent.createNode("attribwrangle", "create_data_uvs")
+	wrangle_uv_attr_node.parm('class').set(0)
+	wrangle_uv_attr_node.parm('snippet').set(_read_file('createDataUVs.vfl'))
+	wrangle_uv_attr_node.setInput(0, parent.indirectInputs()[0])
+
+	# Wrangle for assigning uvs for data texture
+	wrangle_uv_node = parent.createNode("attribwrangle", "data_uv_coordinates")
+	wrangle_uv_node.parm('class').setExpression('ch("../class")+2')
+	wrangle_uv_node.parm('snippet').set(_read_file('dataUVCoordinates.vfl'))
+	wrangle_uv_node.setInput(0, wrangle_uv_attr_node)
+
+	switch_node = parent.createNode('switch', 'switch_geometry_texture')
+	switch_node.setInput(0, wrangle_node)
+	switch_node.setInput(1, wrangle_uv_node)
+	switch_node.parm('input').setExpression('ch("../mode")')
 	
 	output_node = parent.createNode('output')
-	output_node.setInput(0, wrangle_node)
+	output_node.setInput(0, switch_node)
 	
 	parent.layoutChildren()
 

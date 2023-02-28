@@ -16,8 +16,8 @@ def attribute_menu_list(kwargs: dict) -> list[str]:
 		return []
 	
 	geo = node.inputs()[0].geometry()
-	mode = node.evalParm('mode')
-	attrs = geo.vertexAttribs() if mode else geo.pointAttribs()
+	class_mode = node.evalParm('class')
+	attrs = geo.vertexAttribs() if class_mode else geo.pointAttribs()
 	
 	result = []
 
@@ -35,12 +35,12 @@ def component_menu_list(kwargs: dict) -> list[str]:
 	if not node.inputs():
 		return []
 	
-	mode = node.evalParm('mode')
+	class_mode = node.evalParm('class')
 	geo = node.input(0).geometry()
-	attribs = geo.vertexAttribs() if mode else geo.pointAttribs()
+	attribs = geo.vertexAttribs() if class_mode else geo.pointAttribs()
 	attrib_names = node.evalParm('attributes').split(' ')
 
-	attribs = [geo.findVertexAttrib(x) if mode else geo.findPointAttrib(x) for x in attrib_names]
+	attribs = [geo.findVertexAttrib(x) if class_mode else geo.findPointAttrib(x) for x in attrib_names]
 
 	result = []
 	for attrib in attribs:
