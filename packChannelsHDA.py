@@ -104,6 +104,14 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					'Mode',
 					['points', 'vertices', 'texture']
 				),
+				hou.StringParmTemplate(
+					'attributes',
+					'Attributes',
+					1,
+					menu_type= hou.menuType.StringToggle,
+					item_generator_script= 'hou.pwd().hm().attribute_menu_list(kwargs)',
+					item_generator_script_language= hou.scriptLanguage.Python,
+				),
 				hou.MenuParmTemplate(
 					'channels',
 					'Channels',
@@ -115,14 +123,6 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					default_value= int('0110111'[::-1], 2),
 					script_callback= 'hou.pwd().hm().toggle_attributes(kwargs)',
 					script_callback_language= hou.scriptLanguage.Python,
-				),
-				hou.StringParmTemplate(
-					'attributes',
-					'Attributes',
-					1,
-					menu_type= hou.menuType.StringToggle,
-					item_generator_script= 'hou.pwd().hm().attribute_menu_list(kwargs)',
-					item_generator_script_language= hou.scriptLanguage.Python,
 				),
 			),
 		),
@@ -142,6 +142,7 @@ def _build_hda_network(parent: hou.Node) -> None:
 
 	wrangle_node = parent.createNode("attribwrangle", "assign_components")
 	wrangle_node.parm('snippet').set(_read_file('assignComponents.vfl'))
+	wrangle_node.parm('class').setExpression('ch("../mode")+2')
 	wrangle_node.setInput(0, parent.indirectInputs()[0])
 	
 	output_node = parent.createNode('output')
