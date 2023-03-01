@@ -94,22 +94,16 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 	button_labels = [x[0] for x in buttons]
 
 	return (
+		# Global Parameters
 		hou.FolderParmTemplate(
 			'options',
 			'Attributes',
 			folder_type= hou.folderType.Simple,
 			parm_templates= (
 				hou.MenuParmTemplate(
-					'mode',
-					'Mode',
-					['geometry', 'texture'],
-					join_with_next= True,
-				),
-				hou.MenuParmTemplate(
 					'class',
 					'Class',
 					['points', 'vertices'],
-					is_label_hidden= True,
 				),
 				hou.StringParmTemplate(
 					'attributes',
@@ -121,26 +115,95 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 				),
 			),
 		),
+		# Geometry Attribute Parameters
 		hou.FolderParmTemplate(
-			'packing_attributes',
-			'Packing',
+			'packing_geometry',
+			'Geometry',
 			folder_type= hou.folderType.Simple,
-			conditionals= { hou.parmCondType.HideWhen: '{ mode == texture }' },
 			parm_templates= (
-				hou.MenuParmTemplate(
-					'channels',
-					'Channels',
-					[],
-					is_button_strip= True,
-					menu_type=hou.menuType.StringToggle,
-					item_generator_script= str(sum(zip(button_labels, button_labels), ())),
-					item_generator_script_language=hou.scriptLanguage.Python,
-					default_value= int('0110111'[::-1], 2),
-					script_callback= 'hou.pwd().hm().toggle_attributes(kwargs)',
-					script_callback_language= hou.scriptLanguage.Python,
+				hou.ToggleParmTemplate(
+					'enable_geometry',
+					'Enable',
+					default_value= True
+				), 
+				hou.FolderParmTemplate(
+					'packing_attributes_parms',
+					'',
+					folder_type= hou.folderType.Simple,
+					tags= {"group_type": "simple", "sidefx::look": "blank"},
+					conditionals= { hou.parmCondType.HideWhen: '{ enable_geometry == 0 }' },
+					parm_templates= (
+						hou.MenuParmTemplate(
+							'channels',
+							'Channels',
+							[],
+							is_button_strip= True,
+							menu_type=hou.menuType.StringToggle,
+							item_generator_script= str(sum(zip(button_labels, button_labels), ())),
+							item_generator_script_language=hou.scriptLanguage.Python,
+							default_value= int('001'[::-1], 2),
+							script_callback= 'hou.pwd().hm().toggle_attributes(kwargs)',
+							script_callback_language= hou.scriptLanguage.Python,
+						),
+						hou.SeparatorParmTemplate('channel_separator'),
+						*(_attrParmTemplate(x[0], x[1]) for x in buttons),
+					),
 				),
-				hou.SeparatorParmTemplate('channel_separator'),
-				*(_attrParmTemplate(x[0], x[1]) for x in buttons),
+			),
+		),
+		# Texture Attribute Parameters
+		hou.FolderParmTemplate(
+			'packing_texture',
+			'Texture',
+			folder_type= hou.folderType.Simple,
+			parm_templates= (
+				hou.ToggleParmTemplate('enable_texture',
+					'Enable',
+					default_value= False
+				), 
+				hou.FolderParmTemplate(
+					'packing_texture_parms',
+					'',
+					folder_type= hou.folderType.Simple,
+					tags= {"group_type": "simple", "sidefx::look": "blank"},
+					conditionals= { hou.parmCondType.HideWhen: '{ enable_texture == 0 }' },
+					parm_templates= (
+						hou.ButtonParmTemplate(
+							'save_texture',
+							'Save to Disk',
+							script_callback= 'hou.pwd().hm().saveTexture()',
+							script_callback_language= hou.scriptLanguage.Python,
+							join_with_next= True,
+						),
+						hou.LabelParmTemplate(
+							'output_size_label',
+							'Output Size',
+							is_label_hidden= True,
+							column_labels= (['`chs("output_sizex")` x `chs("output_sizey")` pixels, `chs("output_sizez")` attributes']),
+						),
+						hou.StringParmTemplate(
+							'output',
+							'Output File',
+							1,
+							default_value= (['$HIP/tex/${OS}_{attrs}.exr']),
+							string_type=hou.stringParmType.FileReference,
+							file_type=hou.fileType.Image,
+							tags= {"filechooser_mode": "write"},
+						),
+						hou.IntParmTemplate(
+							'output_size',
+							'Output Size',
+							3,
+							is_hidden= True,
+						),
+						hou.StringParmTemplate(
+							'uvattrib',
+							'UV Attribute',
+							1,
+							default_value= (['uv1']),
+						),
+					),
+				),
 			),
 		),
 	)
