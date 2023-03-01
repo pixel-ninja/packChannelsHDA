@@ -1,4 +1,9 @@
 string class = {'point', 'vertex'}[chi('../class')];
 string uv_name = '__data_uv';
-addattrib(0, class, uv_name, {0, 0, 0});
+
+vector output_size = chv('../output_size');
+float x = ((@elemnum % output_size.x) + 0.5) / output_size.x;
+float y = 1 - (floor(@elemnum / output_size.x) + 0.5) / output_size.y;
+
+addattrib(0, class, uv_name, set(x, y, 0));
 setattribtypeinfo(0, class, uv_name, 'texturecoord');

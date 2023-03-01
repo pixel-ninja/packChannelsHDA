@@ -1,3 +1,99 @@
+import os
+import math
+
+def findNextPowerOf2(n: int) -> int:
+	k = 1
+	while k < n:
+		k = k << 1
+	
+	return k
+
+
+def calculateOutputSize():
+	node = hou.pwd()
+	geo = node.geometry()
+	valid_attrs = node.evalParm('attribs').split(' ')
+	if not ''.join(valid_attrs):
+		valid_attrs = []
+		
+	mode = hou.pwd().evalParm('mode')
+	num_elements = geo.intrinsicValue('vertexcount' if mode else 'pointcount')
+	num_attrs = len(valid_attrs) # int(len(data)/4/width)  # Number of attrs
+	
+	square = findNextPowerOf2(math.sqrt(num_elements * num_attrs))
+	width = square
+	height = math.ceil(num_elements / width) * num_attrs 
+	
+	node.parmTuple('output_size').set((width, height, num_attrs))
+	return width, height, num_attrs
+
+def saveTexture():
+	node = hou.pwd()
+	geo = node.geometry()
+	path = node.evalParm('output')
+	valid_attrs = node.evalParm('attribs').split(' ')
+	if not ''.join(valid_attrs):
+		valid_attrs = []
+		
+	# Get image size
+	width, height, num_attrs = node.evalParmTuple('output_size')
+	print(f'Output size: {width} x {height}')
+		
+	# Get list of all attributes as vec4s
+	data, attrs = getAttribsAsVec4(geo, width, valid_attrs)
+	
+	# Save Image
+	attrs_string = '-'.join(attrs)
+	path = path.replace('{attrs}', attrs_string) 
+	print(f'Saving to: {path}')
+	
+	# Make Folders if they don't exist
+	folder = os.path.dirname(path)
+	if not os.path.exists(folder):
+		os.makedirs(folder)
+	
+	hou.saveImageDataToFile(data, width, height, path)
+	print('Done')
+	
+	
+def padVec3ListToVec4(inList, value):
+	'''Mutates flattened float list from vec3 to vec4'''
+	i = 3
+	while i < len(inList)+1:
+		inList.insert(i, value)
+		i += 4
+
+def getAttribsAsVec4(geo, width, valid_attrs=[]):
+	'''Returns flattened float list of all vertex attrs'''
+	data = []
+	attrs = []
+	
+	mode = hou.pwd().evalParm('mode')
+	attribs = list(geo.vertexAttribs() if mode else geo.pointAttribs())
+	attribs.sort(key=lambda x: x.name().lower())
+
+	for attrib in attribs:
+		name = attrib.name()
+		if valid_attrs and name not in valid_attrs:
+			continue
+		
+		attrs.append(name)
+		print("Getting: " + name)
+
+		values = list(geo.vertexFloatAttribValues(name) if mode else geo.pointFloatAttribValues(name))
+
+		if attrib.size() == 3:
+			padVec3ListToVec4(values, 1)
+		
+			
+		# Extend values to next multiple of image width
+		pad_amount = ((width * 4) - len(values)) % (width * 4)
+		values.extend([0] * pad_amount)
+		
+		data.extend(values)
+
+	return (data, attrs)
+
 def toggle_attributes(kwargs: dict) -> None:
 	node = kwargs['node']
 	channelsParm = node.parm('channels')
