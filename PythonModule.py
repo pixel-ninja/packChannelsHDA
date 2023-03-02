@@ -9,15 +9,20 @@ def findNextPowerOf2(n: int) -> int:
 	return k
 
 
+def validSelectedAttributes() -> list[str]:
+	attrs = hou.pwd().evalParm('attributes').split(' ')
+	if not ''.join(attrs):
+		attrs = []
+
+	return attrs
+
 def calculateOutputSize():
 	node = hou.pwd()
 	geo = node.geometry()
-	valid_attrs = node.evalParm('attribs').split(' ')
-	if not ''.join(valid_attrs):
-		valid_attrs = []
+	valid_attrs = validSelectedAttributes()
 		
-	mode = hou.pwd().evalParm('mode')
-	num_elements = geo.intrinsicValue('vertexcount' if mode else 'pointcount')
+	class_mode = hou.pwd().evalParm('class')
+	num_elements = geo.intrinsicValue('vertexcount' if class_mode else 'pointcount')
 	num_attrs = len(valid_attrs) # int(len(data)/4/width)  # Number of attrs
 	
 	square = findNextPowerOf2(math.sqrt(num_elements * num_attrs))
@@ -31,10 +36,8 @@ def saveTexture():
 	node = hou.pwd()
 	geo = node.geometry()
 	path = node.evalParm('output')
-	valid_attrs = node.evalParm('attribs').split(' ')
-	if not ''.join(valid_attrs):
-		valid_attrs = []
-		
+	valid_attrs = validSelectedAttributes()
+	
 	# Get image size
 	width, height, num_attrs = node.evalParmTuple('output_size')
 	print(f'Output size: {width} x {height}')
@@ -52,7 +55,7 @@ def saveTexture():
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 	
-	hou.saveImageDataToFile(data, width, height, path)
+	# hou.saveImageDataToFile(data, width, height, path)
 	print('Done')
 	
 	
@@ -68,8 +71,8 @@ def getAttribsAsVec4(geo, width, valid_attrs=[]):
 	data = []
 	attrs = []
 	
-	mode = hou.pwd().evalParm('mode')
-	attribs = list(geo.vertexAttribs() if mode else geo.pointAttribs())
+	class_mode = hou.pwd().evalParm('class')
+	attribs = list(geo.vertexAttribs() if class_mode else geo.pointAttribs())
 	attribs.sort(key=lambda x: x.name().lower())
 
 	for attrib in attribs:
@@ -80,7 +83,7 @@ def getAttribsAsVec4(geo, width, valid_attrs=[]):
 		attrs.append(name)
 		print("Getting: " + name)
 
-		values = list(geo.vertexFloatAttribValues(name) if mode else geo.pointFloatAttribValues(name))
+		values = list(geo.vertexFloatAttribValues(name) if class_mode else geo.pointFloatAttribValues(name))
 
 		if attrib.size() == 3:
 			padVec3ListToVec4(values, 1)

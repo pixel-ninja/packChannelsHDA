@@ -212,13 +212,6 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 def _build_hda_network(parent: hou.Node) -> None:
 	'''Builds network inside of hda for assigning attribute values.'''
 
-	# GEO BRANCH
-	# Wrangle for assigning components to point/vector attributes
-	wrangle_node = parent.createNode("attribwrangle", "assign_components")
-	wrangle_node.parm('snippet').set(_read_file('assignComponents.vfl'))
-	wrangle_node.parm('class').setExpression('ch("../class")+2')
-	wrangle_node.setInput(0, parent.indirectInputs()[0])
-
 	# TEXTURE BRANCH
 	# Wrangle for creating data uvs
 	wrangle_uv_attr_node = parent.createNode("attribwrangle", "create_data_uvs")
@@ -232,13 +225,28 @@ def _build_hda_network(parent: hou.Node) -> None:
 	wrangle_uv_node.parm('snippet').set(_read_file('dataUVCoordinates.vfl'))
 	wrangle_uv_node.setInput(0, wrangle_uv_attr_node)
 
-	switch_node = parent.createNode('switch', 'switch_geometry_texture')
-	switch_node.setInput(0, wrangle_node)
-	switch_node.setInput(1, wrangle_uv_node)
-	switch_node.parm('input').setExpression('ch("../mode")')
+	# Switch for enabling writing attributes to texture
+	switch_texture_node = parent.createNode('switch', 'switch_texture')
+	switch_texture_node.setInput(0, parent.indirectInputs()[0])
+	switch_texture_node.setInput(1, wrangle_uv_node)
+	switch_texture_node.parm('input').setExpression('ch("../enable_texture")')
+
+	# GEO BRANCH
+	# Wrangle for assigning components to point/vector attributes
+	wrangle_assign_components_node = parent.createNode("attribwrangle", "assign_components")
+	wrangle_assign_components_node.parm('snippet').set(_read_file('assignComponents.vfl'))
+	wrangle_assign_components_node.parm('class').setExpression('ch("../class")+2')
+	wrangle_assign_components_node.setInput(0, switch_texture_node)
+
+	# Switch for enabling writing attributes to geometry
+	switch_geometry_node = parent.createNode('switch', 'switch_geometry')
+	switch_geometry_node.setInput(0, switch_texture_node)
+	switch_geometry_node.setInput(1, wrangle_assign_components_node)
+	switch_geometry_node.parm('input').setExpression('ch("../enable_geometry")')
+
 	
 	output_node = parent.createNode('output')
-	output_node.setInput(0, switch_node)
+	output_node.setInput(0, switch_geometry_node)
 	
 	parent.layoutChildren()
 

@@ -1,5 +1,5 @@
 string class = {'point', 'vertex'}[chi('../class')];
-string uv_name = '__data_uv';
+string uv_name = chs('../uvattrib');
 
 vector output_size = chv('../output_size');
 float x = ((@elemnum % output_size.x) + 0.5) / output_size.x;
