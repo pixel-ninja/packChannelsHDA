@@ -3,7 +3,6 @@ import re
 
 import hou
 
-
 _NAMESPACE = 'PixelNinja'
 _NAME = 'packChannels'
 _LABEL = 'Pack Channels'
@@ -54,16 +53,16 @@ def _create_hda(parent: hou.Node) -> hou.Node:
 		create_backup= False,
 	)
 
-def _attrParmTemplate(name: str, size: int) -> hou.FolderParmTemplate:
+def _attrParmTemplate(name: str, size: int, suffix: str = '') -> hou.FolderParmTemplate:
 	return hou.FolderParmTemplate(
-		name,
-		name,
+		f'{name}{suffix}',
+		f'{name}{suffix}',
 		folder_type= hou.folderType.Simple,
 		tags= {"group_type": "simple", "sidefx::look": "blank"},
 		parm_templates= [
 			hou.MenuParmTemplate(
-				f'{name}_{x}',
-				name,
+				f'{name}_{x}{suffix}',
+				f'{name}{suffix}',
 				[],
 				is_label_hidden= x > 0,
 				join_with_next= True,
@@ -125,7 +124,7 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					'enable_geometry',
 					'Enable',
 					default_value= True
-				), 
+				),
 				hou.FolderParmTemplate(
 					'packing_attributes_parms',
 					'',
@@ -173,13 +172,20 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 							'Save to Disk',
 							script_callback= 'hou.pwd().hm().saveTexture()',
 							script_callback_language= hou.scriptLanguage.Python,
+						),
+						hou.MenuParmTemplate(
+							'height',
+							'Size',
+							menu_items= ('smallest', 'square'),
+							script_callback= 'hou.pwd().hm().calculateOutputSize(kwargs["node"])',
+							script_callback_language= hou.scriptLanguage.Python,
 							join_with_next= True,
 						),
 						hou.LabelParmTemplate(
 							'output_size_label',
 							'Output Size',
 							is_label_hidden= True,
-							column_labels= (['`chs("output_sizex")` x `chs("output_sizey")` pixels, `chs("output_sizez")` attributes']),
+							column_labels= (['`chs("output_sizex")` x `chs("output_sizey")` pixels']),
 						),
 						hou.StringParmTemplate(
 							'output',
@@ -202,6 +208,14 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 							1,
 							default_value= (['uv1']),
 						),
+						hou.FolderParmTemplate(
+							'texture_multiparm',
+							'Pixel Rows/Values',
+							folder_type= hou.folderType.MultiparmBlock,
+							script_callback= 'hou.pwd().hm().calculateOutputSize(kwargs["node"])',
+							script_callback_language= hou.scriptLanguage.Python,
+							parm_templates= [_attrParmTemplate('Row', 4, suffix='_#')],
+						),
 					),
 				),
 			),
@@ -213,17 +227,16 @@ def _build_hda_network(parent: hou.Node) -> None:
 	'''Builds network inside of hda for assigning attribute values.'''
 
 	# TEXTURE BRANCH
-	# Wrangle for creating data uvs
-	wrangle_uv_attr_node = parent.createNode("attribwrangle", "create_data_uvs")
-	wrangle_uv_attr_node.parm('class').set(0)
-	wrangle_uv_attr_node.parm('snippet').set(_read_file('createDataUVs.vfl'))
-	wrangle_uv_attr_node.setInput(0, parent.indirectInputs()[0])
+	# Python sop for updating texture size
+	python_calculate_output = parent.createNode('python', 'calculate_texture_size')
+	python_calculate_output.parm('python').set("node = hou.parent()\nnode.hm().calculateOutputSize(node)")
+	python_calculate_output.setInput(0, parent.indirectInputs()[0])
 
-	# Wrangle for assigning uvs for data texture
+	# Wrangle for creating data uvs
 	wrangle_uv_node = parent.createNode("attribwrangle", "data_uv_coordinates")
 	wrangle_uv_node.parm('class').setExpression('ch("../class")+2')
 	wrangle_uv_node.parm('snippet').set(_read_file('dataUVCoordinates.vfl'))
-	wrangle_uv_node.setInput(0, wrangle_uv_attr_node)
+	wrangle_uv_node.setInput(0, python_calculate_output)
 
 	# Switch for enabling writing attributes to texture
 	switch_texture_node = parent.createNode('switch', 'switch_texture')

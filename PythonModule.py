@@ -1,6 +1,8 @@
 import os
 import math
 
+import hou
+
 def findNextPowerOf2(n: int) -> int:
 	k = 1
 	while k < n:
@@ -16,18 +18,19 @@ def validSelectedAttributes() -> list[str]:
 
 	return attrs
 
-def calculateOutputSize():
-	node = hou.pwd()
-	geo = node.geometry()
-	valid_attrs = validSelectedAttributes()
-		
-	class_mode = hou.pwd().evalParm('class')
+def calculateOutputSize(node: hou.Node):
+	geo = node.input(0).geometry()
+
+	class_mode = node.evalParm('class')
 	num_elements = geo.intrinsicValue('vertexcount' if class_mode else 'pointcount')
-	num_attrs = len(valid_attrs) # int(len(data)/4/width)  # Number of attrs
+	num_attrs = node.evalParm('texture_multiparm')
 	
-	square = findNextPowerOf2(math.sqrt(num_elements * num_attrs))
+	force_square = node.evalParm('height')
+	square = findNextPowerOf2(int(math.sqrt(num_elements * num_attrs)))
+	square = max(square, findNextPowerOf2(int(math.ceil(num_elements / square) * num_attrs)))
+	
 	width = square
-	height = math.ceil(num_elements / width) * num_attrs 
+	height = square if force_square else math.ceil(num_elements / square) * num_attrs 
 	
 	node.parmTuple('output_size').set((width, height, num_attrs))
 	return width, height, num_attrs
@@ -49,13 +52,14 @@ def saveTexture():
 	attrs_string = '-'.join(attrs)
 	path = path.replace('{attrs}', attrs_string) 
 	print(f'Saving to: {path}')
+	return
 	
 	# Make Folders if they don't exist
 	folder = os.path.dirname(path)
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 	
-	# hou.saveImageDataToFile(data, width, height, path)
+	hou.saveImageDataToFile(data, width, height, path)
 	print('Done')
 	
 	
