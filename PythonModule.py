@@ -37,7 +37,7 @@ def calculateOutputSize(node: hou.Node):
 
 def saveTexture():
 	node = hou.pwd()
-	geo = node.geometry()
+	geo = node.input(0).geometry()
 	path = node.evalParm('output')
 	valid_attrs = validSelectedAttributes()
 	
