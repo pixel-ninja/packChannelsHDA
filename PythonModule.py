@@ -3,6 +3,8 @@ import math
 
 import hou
 
+_COMPONENT_LETTERS = 'xyzw'
+
 def findNextPowerOf2(n: int) -> int:
 	k = 1
 	while k < n:
@@ -12,6 +14,8 @@ def findNextPowerOf2(n: int) -> int:
 
 
 def validSelectedAttributes() -> list[str]:
+	# TODO: Validate attributes
+	# Currently simply returns the values in the attributes parm
 	attrs = hou.pwd().evalParm('attributes').split(' ')
 	if not ''.join(attrs):
 		attrs = []
@@ -44,7 +48,12 @@ def saveTexture():
 	# Get image size
 	width, height, num_attrs = node.evalParmTuple('output_size')
 	print(f'Output size: {width} x {height}')
-		
+	
+
+	# Get pixel components from multiparm
+	attribute_mapping = evalTextureMultiParm(node)
+	print(attribute_mapping)
+	return
 	# Get list of all attributes as vec4s
 	data, attrs = getAttribsAsVec4(geo, width, valid_attrs)
 	
@@ -62,7 +71,40 @@ def saveTexture():
 	hou.saveImageDataToFile(data, width, height, path)
 	print('Done')
 	
+
+def evalTextureMultiParm(node: hou.Node) -> list[tuple[str, int]]:
+	result = []
+	multiparm = node.parm('texture_multiparm')
+	multiparm_instances = multiparm.multiParmInstances()
+	for parm in multiparm_instances:
+		value = parm.evalAsString()
+
+		# Skip folders
+		if value == '0':
+			continue
+
+		# Extract name and component
+		mapping = value.split('.')
+		name = mapping[0]
+
+		# Convert single space to None
+		# Single space required for blank menu option
+		if name == ' ':
+			name = None
+
+		if len(mapping) > 1:
+			# Get component number (convert from xywz if required)
+			component = mapping[1]
+			component = _COMPONENT_LETTERS.index(component) if component in _COMPONENT_LETTERS else int(component)
+		else:
+			# Handle single component attributes
+			component = 0
+
+		result.append((name, component))
 	
+	return result
+
+
 def padVec3ListToVec4(inList, value):
 	'''Mutates flattened float list from vec3 to vec4'''
 	i = 3
@@ -160,7 +202,7 @@ def component_menu_list(kwargs: dict) -> list[str]:
 			result.append(name)
 		elif size < 5:
 			for i in range(size):
-				result.append(f'{name}.{"xyzw"[i]}')
+				result.append(f'{name}.{_COMPONENT_LETTERS[i]}')
 		else:
 			for i in range(size):
 				result.append(f'{name}.[{i}]')
