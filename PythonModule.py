@@ -39,38 +39,6 @@ def calculateOutputSize(node: hou.Node):
 	node.parmTuple('output_size').set((width, height, num_attrs))
 	return width, height, num_attrs
 
-def saveTexture():
-	node = hou.pwd()
-	geo = node.input(0).geometry()
-	path = node.evalParm('output')
-	valid_attrs = validSelectedAttributes()
-	
-	# Get image size
-	width, height, num_attrs = node.evalParmTuple('output_size')
-	print(f'Output size: {width} x {height}')
-	
-
-	# Get pixel components from multiparm
-	attribute_mapping = evalTextureMultiParm(node)
-	print(attribute_mapping)
-	return
-	# Get list of all attributes as vec4s
-	data, attrs = getAttribsAsVec4(geo, width, valid_attrs)
-	
-	# Save Image
-	attrs_string = '-'.join(attrs)
-	path = path.replace('{attrs}', attrs_string) 
-	print(f'Saving to: {path}')
-	return
-	
-	# Make Folders if they don't exist
-	folder = os.path.dirname(path)
-	if not os.path.exists(folder):
-		os.makedirs(folder)
-	
-	hou.saveImageDataToFile(data, width, height, path)
-	print('Done')
-	
 
 def evalTextureMultiParm(node: hou.Node) -> list[tuple[str, int]]:
 	result = []
@@ -105,45 +73,110 @@ def evalTextureMultiParm(node: hou.Node) -> list[tuple[str, int]]:
 	return result
 
 
-def padVec3ListToVec4(inList, value):
-	'''Mutates flattened float list from vec3 to vec4'''
-	i = 3
-	while i < len(inList)+1:
-		inList.insert(i, value)
-		i += 4
-
-def getAttribsAsVec4(geo, width, valid_attrs=[]):
-	'''Returns flattened float list of all vertex attrs'''
-	data = []
-	attrs = []
+def attributeValueDict(geo: hou.Geometry, class_mode: int, attrib_names: list[str]) -> dict[str, list[float]]:
+	if class_mode == 0:
+		return { x: geo.pointFloatAttribValues(x) for x in attrib_names if x is not None }
+	else:
+		return { x: geo.vertexFloatAttribValues(x) for x in attrib_names if x is not None }
 	
-	class_mode = hou.pwd().evalParm('class')
-	attribs = list(geo.vertexAttribs() if class_mode else geo.pointAttribs())
-	attribs.sort(key=lambda x: x.name().lower())
 
-	for attrib in attribs:
-		name = attrib.name()
-		if valid_attrs and name not in valid_attrs:
+def attributeSizeDict(geo: hou.Geometry, class_mode: int, attrib_names: list[str]) -> dict[str, int]:
+	if class_mode == 0:
+		return { x: geo.findPointAttrib(x).size() for x in attrib_names if x is not None }
+	else:
+		return { x: geo.findVertexAttrib(x).size() for x in attrib_names if x is not None }
+
+
+def componentValueDict(
+	geo: hou.Geometry,
+	class_mode: int,
+	attrib_mapping: list[tuple[str, int]],
+	) -> dict[tuple[str, int],list[float]]:
+
+	unique_attribs = { x[0] for x in attrib_mapping }
+	unique_components = set(attrib_mapping)
+	attrib_sizes = attributeSizeDict(geo, class_mode, unique_attribs)
+	attrib_values = attributeValueDict(geo, class_mode, unique_attribs)
+
+	result = {}
+
+	for (name, component) in unique_components:
+		if (name, component) in result:
 			continue
-		
-		attrs.append(name)
-		print("Getting: " + name)
 
-		values = list(geo.vertexFloatAttribValues(name) if class_mode else geo.pointFloatAttribValues(name))
+		if name is None:
+			continue
 
-		if attrib.size() == 3:
-			padVec3ListToVec4(values, 1)
-		
-			
-		# Extend values to next multiple of image width
-		pad_amount = ((width * 4) - len(values)) % (width * 4)
-		values.extend([0] * pad_amount)
-		
-		data.extend(values)
+		result[(name, component)] = attrib_values[name][component::attrib_sizes[name]]
 
-	return (data, attrs)
+	return result
+
+
+def pixelValues(
+	attribute_mapping: list[tuple[str, int]],
+	component_values: dict[tuple[str, int],list[float]],
+	width: int,
+	height: int,
+	num_elements: int
+	) -> list[float]:
+
+	# TODO: Figure out how to map the attribute components to the output pixel components list
+	result = [0.0, 0.0, 0.0, 1.0] * width * height
+
+	# result[pixel_index:end + pixel_index:4] = r
+	row_span = math.ceil(num_elements / width) * width
+
+	for i, (name, component) in enumerate(attribute_mapping):
+		if name is None:
+			continue
+
+		row = int(math.floor(i / 4))
+		start = i % 4 + row * row_span
+		end = start + num_elements * 4
+		result[start:end:4] = component_values[(name, component)]
+
+	return result
+
+
+def saveTexture() -> None:
+	'''Write data texture with selected component values.'''
+
+	node = hou.pwd()
+	geo = node.input(0).geometry()
+	path = node.evalParm('output')
+	class_mode = node.evalParm('class')
+	num_elements = geo.intrinsicValue('vertexcount' if class_mode else 'pointcount')
+	valid_attrs = validSelectedAttributes()
+	
+	# Get image size
+	width, height, num_attrs = node.evalParmTuple('output_size')
+	print(f'Output size: {width} x {height}')
+	
+
+	# Get pixel component values from multiparm settings
+	print('Getting attribute values')
+	attribute_mapping = evalTextureMultiParm(node)
+	component_values = componentValueDict(geo, class_mode, attribute_mapping)
+	pixel_values = pixelValues(attribute_mapping, component_values, width, height, num_elements )
+	
+	# Save Image
+	# attrs_string = '-'.join(attrs)
+	# path = path.replace('{attrs}', attrs_string) 
+	print(f'Saving to: {path}')
+	
+	# Make Folders if they don't exist
+	folder = os.path.dirname(path)
+	if not os.path.exists(folder):
+		os.makedirs(folder)
+	
+	hou.saveImageDataToFile(pixel_values, width, height, path)
+	print('Done')
+
+
+# UI and Menu Functions
 
 def toggle_attributes(kwargs: dict) -> None:
+	'''Display options only for selected attribute buttons.'''
 	node = kwargs['node']
 	channelsParm = node.parm('channels')
 	channelNames = channelsParm.menuLabels()
@@ -155,6 +188,7 @@ def toggle_attributes(kwargs: dict) -> None:
 
 
 def attribute_menu_list(kwargs: dict) -> list[str]:
+	'''Returns a list of point or vertex attributes for the input geometry.'''
 	node = kwargs['node']
 
 	if not node.inputs():
@@ -173,7 +207,7 @@ def attribute_menu_list(kwargs: dict) -> list[str]:
 
 
 def component_menu_list(kwargs: dict) -> list[str]:
-	'''Returns token-label paired list of all point attribute components.'''
+	'''Returns token,label paired list of all point attribute components.'''
 	node = kwargs['node']
 	parm = kwargs['parm']
 
