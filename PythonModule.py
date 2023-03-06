@@ -149,7 +149,7 @@ def pixelValues(
 	result = [0.0, 0.0, 0.0, 1.0] * width * height
 
 	# result[pixel_index:end + pixel_index:4] = r
-	row_span = math.ceil(num_elements / width) * width
+	row_span = math.ceil(num_elements / width) * width * 4
 
 	for i, (name, component) in enumerate(attribute_mapping):
 		if name is None:
