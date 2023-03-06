@@ -111,6 +111,8 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					menu_type= hou.menuType.StringToggle,
 					item_generator_script= 'hou.pwd().hm().attribute_menu_list(kwargs)',
 					item_generator_script_language= hou.scriptLanguage.Python,
+					script_callback= 'hou.pwd().hm().validSelectedAttributes(kwargs["node"])',
+					script_callback_language= hou.scriptLanguage.Python,
 				),
 			),
 		),
@@ -159,7 +161,7 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 				hou.ToggleParmTemplate('enable_texture',
 					'Enable',
 					default_value= False
-				), 
+				),
 				hou.FolderParmTemplate(
 					'packing_texture_parms',
 					'',

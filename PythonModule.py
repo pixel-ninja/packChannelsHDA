@@ -13,14 +13,39 @@ def findNextPowerOf2(n: int) -> int:
 	return k
 
 
-def validSelectedAttributes() -> list[str]:
-	# TODO: Validate attributes
-	# Currently simply returns the values in the attributes parm
-	attrs = hou.pwd().evalParm('attributes').split(' ')
-	if not ''.join(attrs):
-		attrs = []
+def getAttribNames(geo: hou.Geometry, class_mode: int):
+	'''Returns the list of point or vertex attribute names in geo.'''
+	if class_mode == 0:
+		return [ x.name() for x in geo.pointAttribs() ]
+	else:
+		return [ x.name() for x in geo.vertexAttribs() ]
 
-	return attrs
+
+def validSelectedAttributes(node: hou.Node) -> list[str]:
+	'''Validate, update and return the list of attributes in the attributes parm.'''
+	geo = node.input(0).geometry()
+
+	class_mode = node.evalParm('class')
+	attrs_parm = node.parm('attributes')
+	attrs = attrs_parm.eval()
+
+	result = attrs.split(' ')
+	if not ''.join(result).replace(' ', ''):
+		result = []
+
+	# Get attrib names
+	valid_attrs = getAttribNames(geo, class_mode)
+
+	# Filter out invalid attribute names
+	result[:] = [x for x in result if x in valid_attrs]
+
+	# Update parm if value changed
+	result_string = ' '.join(result)
+	if result_string != attrs:
+		attrs_parm.set(result_string)	
+
+	return result
+
 
 def calculateOutputSize(node: hou.Node):
 	geo = node.input(0).geometry()
@@ -196,13 +221,9 @@ def attribute_menu_list(kwargs: dict) -> list[str]:
 	
 	geo = node.inputs()[0].geometry()
 	class_mode = node.evalParm('class')
-	attrs = geo.vertexAttribs() if class_mode else geo.pointAttribs()
+	result = getAttribNames(geo, class_mode) * 2
+	result.sort()
 	
-	result = []
-
-	for attr in attrs:
-		result.append(attr.name())
-		result.append(attr.name())
 	return result
 
 
