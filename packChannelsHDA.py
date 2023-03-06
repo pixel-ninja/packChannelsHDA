@@ -53,6 +53,7 @@ def _create_hda(parent: hou.Node) -> hou.Node:
 		create_backup= False,
 	)
 
+
 def _attrParmTemplate(name: str, size: int, suffix: str = '') -> hou.FolderParmTemplate:
 	return hou.FolderParmTemplate(
 		f'{name}{suffix}',
@@ -105,6 +106,7 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					['points', 'vertices'],
 					script_callback= 'hou.pwd().hm().validSelectedAttributes(kwargs["node"])',
 					script_callback_language= hou.scriptLanguage.Python,
+					help= 'Set whether to retrieve/store attributes point or vertex attributes.',
 				),
 				hou.StringParmTemplate(
 					'attributes',
@@ -115,6 +117,7 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					item_generator_script_language= hou.scriptLanguage.Python,
 					script_callback= 'hou.pwd().hm().validSelectedAttributes(kwargs["node"])',
 					script_callback_language= hou.scriptLanguage.Python,
+					help= 'A list of point or vertex attributes to pack.\nNumeric values only, strings and dictionaries are not supported.',
 				),
 			),
 		),
@@ -127,7 +130,8 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 				hou.ToggleParmTemplate(
 					'enable_geometry',
 					'Enable',
-					default_value= True
+					default_value= True,
+					help= 'Toggle storage of attributes into common mesh exchange vertex channels.',
 				),
 				hou.FolderParmTemplate(
 					'packing_attributes_parms',
@@ -147,6 +151,7 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 							default_value= int('001'[::-1], 2),
 							script_callback= 'hou.pwd().hm().toggle_attributes(kwargs)',
 							script_callback_language= hou.scriptLanguage.Python,
+							help= 'Mesh channels for data storage. Cd will include Alpha as other applications store vertex colour as a float4.',
 						),
 						hou.SeparatorParmTemplate('channel_separator'),
 						*(_attrParmTemplate(x[0], x[1]) for x in buttons),
@@ -162,7 +167,8 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 			parm_templates= (
 				hou.ToggleParmTemplate('enable_texture',
 					'Enable',
-					default_value= False
+					default_value= False,
+					help= 'Toggle storage of attributes into a data texture.\nThis will also set uvs to read the texture.',
 				),
 				hou.FolderParmTemplate(
 					'packing_texture_parms',
