@@ -171,7 +171,7 @@ def saveTexture() -> None:
 	path = node.evalParm('output')
 	class_mode = node.evalParm('class')
 	num_elements = geo.intrinsicValue('vertexcount' if class_mode else 'pointcount')
-	valid_attrs = validSelectedAttributes()
+	valid_attrs = validSelectedAttributes(node)
 	
 	# Get image size
 	width, height, num_attrs = node.evalParmTuple('output_size')

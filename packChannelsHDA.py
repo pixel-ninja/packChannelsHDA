@@ -103,6 +103,8 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 					'class',
 					'Class',
 					['points', 'vertices'],
+					script_callback= 'hou.pwd().hm().validSelectedAttributes(kwargs["node"])',
+					script_callback_language= hou.scriptLanguage.Python,
 				),
 				hou.StringParmTemplate(
 					'attributes',
@@ -230,8 +232,8 @@ def _build_hda_network(parent: hou.Node) -> None:
 
 	# TEXTURE BRANCH
 	# Python sop for updating texture size
-	python_calculate_output = parent.createNode('python', 'calculate_texture_size')
-	python_calculate_output.parm('python').set("node = hou.parent()\nnode.hm().calculateOutputSize(node)")
+	python_calculate_output = parent.createNode('python', 'calculate_texture_size_and_validate_attrs')
+	python_calculate_output.parm('python').set("node = hou.parent()\nnode.hm().calculateOutputSize(node)\nnode.hm().validSelectedAttributes(node)")
 	python_calculate_output.setInput(0, parent.indirectInputs()[0])
 
 	# Wrangle for creating data uvs
