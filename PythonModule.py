@@ -47,7 +47,15 @@ def validSelectedAttributes(node: hou.Node) -> list[str]:
 	return result
 
 
-def calculateOutputSize(node: hou.Node):
+def calculateOutputSize(node: hou.Node) -> tuple[int, int, int]:
+	'''
+	Calculate the minimum texture size for the given geometry and attributes.
+	Width will be rounded up to the nearest power of 2.
+	Height can either be smallest or nearest power of 2.
+
+	Returns tuple containing width, height and min_height.
+	Also sets these in the output_size parm.
+	'''
 	geo = node.input(0).geometry()
 
 	class_mode = node.evalParm('class')
@@ -59,9 +67,10 @@ def calculateOutputSize(node: hou.Node):
 	square = max(square, findNextPowerOf2(int(math.ceil(num_elements / square) * num_attrs)))
 	
 	width = square
-	height = square if force_square else math.ceil(num_elements / square) * num_attrs 
+	min_height = math.ceil(num_elements / square) * num_attrs
+	height = square if force_square else min_height 
 	
-	node.parmTuple('output_size').set((width, height, num_attrs))
+	node.parmTuple('output_size').set((width, height, min_height))
 	return width, height, num_attrs
 
 
@@ -142,6 +151,7 @@ def pixelValues(
 	component_values: dict[tuple[str, int],list[float]],
 	width: int,
 	height: int,
+	min_height: int,
 	num_elements: int
 	) -> list[float]:
 
@@ -149,7 +159,8 @@ def pixelValues(
 	result = [0.0, 0.0, 0.0, 1.0] * width * height
 
 	# result[pixel_index:end + pixel_index:4] = r
-	row_span = math.ceil(num_elements / width) * width * 4
+	row_span = math.ceil(num_elements / width) * width * 4  # Min row span
+	# row_span = int(math.ceil(height / (len(attribute_mapping) / 4)) * width * 4)  # Evenly spaced
 
 	for i, (name, component) in enumerate(attribute_mapping):
 		if name is None:
@@ -174,7 +185,7 @@ def saveTexture() -> None:
 	valid_attrs = validSelectedAttributes(node)
 	
 	# Get image size
-	width, height, num_attrs = node.evalParmTuple('output_size')
+	width, height, min_height = node.evalParmTuple('output_size')
 	print(f'Output size: {width} x {height}')
 	
 
@@ -182,7 +193,7 @@ def saveTexture() -> None:
 	print('Getting attribute values')
 	attribute_mapping = evalTextureMultiParm(node)
 	component_values = componentValueDict(geo, class_mode, attribute_mapping)
-	pixel_values = pixelValues(attribute_mapping, component_values, width, height, num_elements )
+	pixel_values = pixelValues(attribute_mapping, component_values, width, height, min_height, num_elements )
 	
 	# Save Image
 	# attrs_string = '-'.join(attrs)
