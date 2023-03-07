@@ -217,11 +217,33 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 							'UV Attribute',
 							1,
 							default_value= (['uv1']),
+							join_with_next= True,
+							help= (
+								'Name of the uv attribute used to read from the saved texture.\n'
+								'If singleUV is off then one uv channel will be created per row with incrementing numbers.\n'
+								'eg. uv1 -> uv2, uv3, etc.\n'
+								'\n'
+								'If singleUV is on then the row values can be accessed by adjusting the v coordinate before reading the texture using one of the following formulas.\n'
+								'\n'
+								'Simple Equation:\n'
+								'This will cover most cases.\n'
+								'uv.y -= row_number/num_rows;\n'
+								'\n'
+								'Full Equation:\n'
+								'Covers all cases but is only strictly required when output_size is "square" and there are an odd number of rows.\n'
+								'uv.y -= row_num * ceil( texture_height / num_rows ) / texture_height;'
+							),
+						),
+						hou.ToggleParmTemplate(
+							'singleUV',
+							'Only Output Single UV Channel',
+							default_value= True,
 						),
 						hou.FolderParmTemplate(
 							'texture_multiparm',
 							'Pixel Rows/Values',
 							folder_type= hou.folderType.MultiparmBlock,
+							tags= {'multistartoffset': '0'},
 							script_callback= 'hou.pwd().hm().calculateOutputSize(kwargs["node"])',
 							script_callback_language= hou.scriptLanguage.Python,
 							parm_templates= [_attrParmTemplate('Row', 4, suffix='_#')],

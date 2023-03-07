@@ -154,13 +154,17 @@ def pixelValues(
 	min_height: int,
 	num_elements: int
 	) -> list[float]:
+	'''
+	Returns a list of floats, with every 4 values corresponding to a single rgba pixel value.
+	Each row (set of 4 component values) is mapped sequentially by point/vertex number.
+	Rows are then evenly spaced within the list.
+	'''
 
-	# TODO: Figure out how to map the attribute components to the output pixel components list
+
 	result = [0.0, 0.0, 0.0, 1.0] * width * height
 
-	# result[pixel_index:end + pixel_index:4] = r
-	row_span = math.ceil(num_elements / width) * width * 4  # Min row span
-	# row_span = int(math.ceil(height / (len(attribute_mapping) / 4)) * width * 4)  # Evenly spaced
+	# row_span = math.ceil(num_elements / width) * width * 4  # Min row span
+	row_span = int(math.ceil(height / (len(attribute_mapping) / 4)) * width * 4)  # Evenly spaced
 
 	for i, (name, component) in enumerate(attribute_mapping):
 		if name is None:

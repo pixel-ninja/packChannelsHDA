@@ -1,9 +1,31 @@
 string class = {'point', 'vertex'}[chi('../class')];
 string uv_name = chs('../uvattrib');
+int num_rows = chi('../texture_multiparm');
 
 vector output_size = chv('../output_size');
 float x = ((@elemnum % output_size.x) + 0.5) / output_size.x;
 float y = 1 - (floor(@elemnum / output_size.x) + 0.5) / output_size.y;
 
-setattrib(0, class, uv_name, @elemnum, 0, set(x,y,0));
-setattribtypeinfo(0, class, uv_name, 'texturecoord');
+if(chi('../singleUV')){
+    setattrib(0, class, uv_name, @elemnum, 0, set(x,y,0));
+    setattribtypeinfo(0, class, uv_name, 'texturecoord');
+}else{
+    float row_span = ceil(output_size.y / num_rows) / output_size.y;
+    
+    // Make template for incrementing row number
+    int start_num = 0;
+    string row_name_template = uv_name;
+    
+    if(isdigit(uv_name[-1])){
+        row_name_template = uv_name[:-1];
+        start_num = atoi(uv_name[-1]);
+    }
+    
+    row_name_template += '%i';
+    
+    for(int i=0; i<num_rows; i++){
+        string row_name = sprintf(row_name_template, i + start_num);
+        setattrib(0, class, row_name, @elemnum, 0, set(x,y - i * row_span,0));
+        setattribtypeinfo(0, class, row_name, 'texturecoord');
+    }
+}
