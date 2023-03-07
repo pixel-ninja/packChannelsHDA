@@ -201,7 +201,7 @@ def _build_parms() -> tuple[hou.ParmTemplate, ...]:
 							'output',
 							'Output File',
 							1,
-							default_value= (['$HIP/tex/${OS}_{attrs}.exr']),
+							default_value= (['$HIP/tex/${HIPNAME}_${OS}.exr']),
 							string_type=hou.stringParmType.FileReference,
 							file_type=hou.fileType.Image,
 							tags= {"filechooser_mode": "write"},
