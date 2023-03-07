@@ -6,7 +6,7 @@ import hou
 _NAMESPACE = 'PixelNinja'
 _NAME = 'packChannels'
 _LABEL = 'Pack Channels'
-_VERSION = "1.0.0"
+_VERSION = "1.0"
 
 _ROOT_PATH = os.path.dirname(__file__)
 
